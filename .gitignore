@@ -4,4 +4,5 @@ target/
 # VS Code
 .vscode/
 
-.github
+# Mac
+.DS_Store
