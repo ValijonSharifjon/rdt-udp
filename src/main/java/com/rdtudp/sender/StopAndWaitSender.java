@@ -3,6 +3,7 @@ package com.rdtudp.sender;
 import java.io.*;
 import java.net.*;
 
+import com.rdtudp.protocol.Corruptor;
 import com.rdtudp.protocol.Packet;
 import com.rdtudp.protocol.PacketCorruptedException;
 
@@ -13,6 +14,7 @@ public class StopAndWaitSender {
     private final DatagramSocket socket;
     private final InetAddress serverAddress;
     private final int serverPort;
+    private Corruptor corruptor;
 
     public StopAndWaitSender(String host, int port) throws IOException {
         this.socket = new DatagramSocket();
@@ -51,6 +53,10 @@ public class StopAndWaitSender {
         sendFin(totalChunks);
 
         System.out.printf("Done. Total retries: %d%n", totalRetries);
+    }
+
+    public void setCorruptor(Corruptor corruptor) {
+        this.corruptor = corruptor;
     }
 
     private int sendWithRetry(Packet packet) throws IOException {
@@ -108,9 +114,20 @@ public class StopAndWaitSender {
     }
 
     private void sendDatagram(byte[] raw) throws IOException {
+        byte[] toSend = raw;
+
+        if (corruptor != null) {
+            toSend = corruptor.apply(raw);
+        }
+
+        if (toSend == null) {
+            System.out.println("    ⚡ DROP: packet dropped");
+            return;
+        }
+
         DatagramPacket datagram = new DatagramPacket(
-            raw,
-            raw.length,
+            toSend,
+            toSend.length,
             serverAddress,
             serverPort
         );
